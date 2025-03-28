@@ -1,0 +1,14 @@
+select 
+order_id,
+store_address_id,
+order_country_code,
+order_started_local_at,
+order_final_status,
+partner_cancellation_strategy,
+order_total_purchase_local_currency,
+partner_commission_pct,
+commission_actual_amount_local_currency
+from  delta.finance_financial_metrics_odp.financial_order_metrics fom
+where 
+fom.order_id IN (101078721821,101078718160,101078710344,101078733986)
+and fom.order_country_code = 'ES'
