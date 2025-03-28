@@ -1,0 +1,35 @@
+with base_payouts as (select
+                        date_format(pay.initiated_at, '%Y-%m-%d')            as yyyy_mm_dd,
+                        pay.initiated_at,
+                        pay.instant_payout_id,
+                        pay.store_address_id,
+                        pay.final_status,
+                        pay.amount_withdrawn,
+                        pay.amount_to_pay,
+                        pay.fee,
+                        pay.failure_reason,
+                        c.country_code
+         from delta.fintech_payouts_odp.partner_instant_payouts pay
+                     LEFT JOIN delta.partner_stores_odp.store_addresses_v2 sa ON pay.store_address_id = sa.store_address_id
+                     LEFT JOIN delta.partner_stores_odp.stores_v2 s ON sa.store_id = s.store_id
+                     LEFT JOIN delta.central_geography_odp.cities_v2 c ON s.city_code = c.city_code),
+partner_earnings as (select
+                        earnings_date,
+                        store_address_id,
+                        daily_earned_amount,
+                        balance_amount
+             from delta.fintech_payouts_odp.partner_daily_earnings
+)
+select distinct base.yyyy_mm_dd,
+        base.instant_payout_id,
+        base.store_address_id,
+        base.final_status,
+        base.failure_reason,
+        ROUND(CAST(base.amount_withdrawn AS DECIMAL (15,2)), 2) AS amount_withdrawn,
+        ROUND(CAST(base.amount_to_pay AS DECIMAL (15,2)), 2)    AS amount_to_pay,
+        ROUND(CAST(base.amount_withdrawn AS DECIMAL (15,2))
+            - CAST(base.amount_to_pay AS DECIMAL (15,2)), 2)    AS fee_calc,
+        base.country_code
+from base_payouts base
+    left join partner_earnings pe on base.yyyy_mm_dd = date_format(pe.earnings_date, '%Y-%m-%d') and base.store_address_id = pe.store_address_id
+WHERE base.initiated_at between date '2025-03-01' AND date '2025-03-16' AND country_code = 'ES' ORDER BY 1
