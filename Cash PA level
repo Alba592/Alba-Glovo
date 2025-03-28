@@ -1,0 +1,42 @@
+WITH base AS (
+SELECT
+    fom.store_address_id, 
+    CASE
+        WHEN fom.order_is_marketplace = FALSE AND COALESCE(opc.pay_at_pickup, FALSE) AND fom.order_courier_payment_method = 'CASH'
+            THEN 1
+        WHEN fom.order_is_marketplace = TRUE AND fom.payment_1_payment_method = 'CASH'
+            THEN 1
+        ELSE 0
+    END AS courier_paid_in_cash,
+    CASE
+        WHEN fom.order_courier_payment_method = 'CASH' 
+            AND (
+                (fom.partner_cancellation_strategy = 'PAY_PRODUCTS' 
+                AND fom.order_final_status = 'CanceledStatus')
+                OR (fom.order_final_status = 'DeliveredStatus' 
+                    AND fom.order_parent_relationship_type IN ('REORDER_COMPENSATION', 'REMAKE'))
+            )
+        THEN fom.order_estimated_purchase_local_currency
+        ELSE fom.cash_collected_by_partner_local_currency
+    END AS courier_paid_in_cash_amount
+FROM
+    delta.finance_financial_metrics_odp.financial_order_metrics fom
+    LEFT JOIN delta.fintech_order_partner_compensations_odp.order_partner_compensations opc ON fom.order_id = opc.order_id
+    LEFT JOIN delta.central_order_descriptors_odp.order_descriptors_v2 od ON fom.order_id = od.order_id
+WHERE
+    fom.order_country_code = 'ES'
+    AND fom.p_creation_date >= TIMESTAMP '2024-12-09' - interval '1' DAY
+    AND fom.p_creation_date <= TIMESTAMP '2024-12-15' + interval '1' DAY
+    AND fom.order_dispatched_local_at >= TIMESTAMP '2024-12-09 00:00:00 UTC'
+    AND fom.order_dispatched_local_at <= TIMESTAMP '2024-12-15 23:59:59 UTC'
+    AND fom.order_is_partner_order
+    AND fom.partner_cancellation_strategy != 'PAY_NOTHING'
+    AND NOT (fom.order_final_status = 'CanceledStatus' AND od.order_picked_up_by_courier_local_at IS NULL)
+    AND fom.store_address_id IN ()
+)
+SELECT 
+    store_address_id,
+    FORMAT('%.2f',SUM(courier_paid_in_cash_amount)) total_cash
+FROM base
+GROUP BY 1 HAVING SUM(courier_paid_in_cash_amount) > 0
+;
