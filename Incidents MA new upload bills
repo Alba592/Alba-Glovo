@@ -1,0 +1,41 @@
+WITH date_filters AS
+(
+    SELECT
+        'start_date' AS label,
+        DATE '2024-11-16' AS val
+                    UNION ALL
+    SELECT
+        'end_date' AS label,
+        DATE '2024-11-30' AS val
+),
+country_filters AS (
+    SELECT
+        'country' AS label,
+        'ES' AS val
+)
+SELECT 
+od.store_address_id,
+       fdr.store_id,
+       od.store_name,
+        fdr.order_id,
+        fdr.type,
+        fdr.reason,
+        fdr.amount,
+        fdr.currency,
+    	  DATE (od.order_activated_local_at) AS order_activation_local_date,
+    	  od.order_country_code, 
+        od.order_city_code, 
+        od.order_code,
+        DATE (fdr.creation_time) AS dispute_creation_date,
+        obc.order_partner_commission_pct as partner_commission_percentage
+FROM
+    delta.contact_order_refund_incidents_odp.fct_partner_dispute_resolutions fdr
+    LEFT JOIN delta.central_order_descriptors_odp.order_descriptors_v2 od
+ON od.order_id = fdr.order_id
+    LEFT JOIN delta.partner_commissions_odp.order_base_commissions obc
+ON obc.order_id = fdr.order_id
+WHERE 1 = 1
+  AND fdr.status = 'ACCEPTED'
+  AND fdr.p_creation_date BETWEEN (SELECT VAL FROM date_filters WHERE label = 'start_date')
+  AND (SELECT VAL FROM date_filters WHERE label = 'end_date')
+  AND od.order_country_code = (SELECT VAL FROM country_filters WHERE label = 'country');
