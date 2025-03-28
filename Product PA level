@@ -1,0 +1,43 @@
+SELECT 
+    store_address_id,
+    count_orders,
+    CASE 
+        WHEN order_country_code = 'TN'
+            THEN FORMAT('%.3f', COALESCE(supply_delayed, 0))
+            ELSE FORMAT('%.2f', COALESCE(supply_delayed, 0))
+    END AS supply_delayed
+FROM (
+SELECT fom.store_address_id,       
+       fom.order_country_code,
+       COUNT(fom.order_id) count_orders,
+       SUM(
+        CASE
+            WHEN (fom.partner_cancellation_strategy = 'PAY_PRODUCTS' AND fom.order_final_status = 'CanceledStatus') 
+                OR (fom.order_parent_relationship_type IN ('REORDER_COMPENSATION', 'REMAKE') AND fom.order_final_status = 'DeliveredStatus')
+                THEN fom.order_estimated_purchase_local_currency
+            ELSE fom.order_total_purchase_local_currency
+        END
+       ) AS supply_delayed
+FROM delta.finance_financial_metrics_odp.financial_order_metrics fom
+WHERE
+    fom.order_country_code = 'ES'
+    AND fom.p_creation_date >= TIMESTAMP '2023-10-07' - interval '30' day
+    AND fom.p_creation_date <= TIMESTAMP '2023-10-13' + interval '1' day
+    AND fom.order_dispatched_local_at >= TIMESTAMP '2023-10-07 00:00:00 UTC' 
+    AND fom.order_dispatched_local_at <= TIMESTAMP '2023-10-13 23:59:59 UTC' 
+    AND fom.order_is_partner_order
+    AND fom.partner_cancellation_strategy <> ('PAY_NOTHING')
+    AND fom.order_final_status IN ('DeliveredStatus', 'CanceledStatus')
+    /* Add this filter if you want to see the result just for one/several orders */
+    -- AND fom.order_id in (123,456,789)
+    /* Add this filter if you want to see the result just for one or several store_address_id */
+    -- AND fom.store_address_id IN (123,456,789)
+GROUP BY 1,2
+);
+
+
+
+
+
+
+
