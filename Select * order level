@@ -1,0 +1,6 @@
+SELECT *
+-- order_code,
+-- order_id
+from delta.finance_financial_metrics_odp.financial_order_metrics 
+where order_code IN ('BAACZHZG')
+
