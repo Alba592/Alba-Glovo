@@ -1,0 +1,37 @@
+SELECT 
+    orders.order_code,
+    orders.order_currency,
+    DATE(orders.order_created_local_at) AS order_created_local_at_date,
+    com.order_partner_commission_pct,
+    stores.store_name,
+    store_addresses.store_address_address,
+    CASE 
+        WHEN orders.order_currency = 'USD' THEN '$'
+        WHEN orders.order_currency = 'EUR' THEN '€'
+        ELSE CONCAT(orders.order_currency, ' ') 
+    END AS order_currency_symbol,
+    order_total_purchase_local_currency AS total_gmv_eur,
+
+    order_total_purchase_local_currency
+        - com.order_partner_commission_adjusted_local_currency
+        - (com.order_partner_commission_adjusted_local_currency * fom.order_tax_rate_adj) AS partners_revenue
+
+FROM delta.central_order_descriptors_odp.order_descriptors_v2 AS orders
+    LEFT JOIN delta.finance_financial_metrics_odp.financial_order_metrics fom ON orders.order_id = fom.order_id
+    LEFT JOIN delta.partner_stores_odp.store_addresses_v2 AS store_addresses ON orders.store_address_id = store_addresses.store_address_id
+    LEFT JOIN delta.partner_stores_odp.stores_v2 AS stores ON store_addresses.store_id = stores.store_id
+    LEFT JOIN delta.finance__partner_commissions__odp.order_base_commissions com ON orders.order_id = com.order_id
+WHERE (NOT fom.order_is_marketplace OR fom.order_is_marketplace IS NULL)
+    AND store_addresses.end_date IS NULL
+    AND stores.end_date IS NULL
+    -- TIME FILTERS:
+    AND orders.order_activated_local_at >= TIMESTAMP '2025-03-01'
+    AND orders.order_activated_local_at < TIMESTAMP '2025-03-16'
+    -- COUNTRY FILTER (comma separated list of codes):
+    AND orders.order_country_code IN ('ES')
+    -- STORE NAME FILTER (comma separated list of names):
+    -- ECI INFRA.
+    AND stores.store_name IN ('Club del Gourmet El Corte Inglés', 'Juguetes El Corte Inglés', 'Videojuegos El Corte Inglés', 'Platos Preparados El Corte Inglés')
+    AND orders.store_address_id NOT IN (656405,656409,656393,656428,656432,656421,656415,656413,656424,656419,656411,662361)
+    -- ECI Groceries
+   -- AND orders.store_address_id IN (656405,656409,656393,656428,656432,656421,656415,656413,656424,656419,656411,662361);
