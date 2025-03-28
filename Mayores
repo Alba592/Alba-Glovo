@@ -1,0 +1,31 @@
+SET TIME ZONE 'UTC';
+SELECT ii.serial_number                as invoice_id,
+    bb.id                     as bill_id,
+    iii.concept,
+    invoicing_detail_name             as company_name,
+    invoicing_detail_external_name         as store_name,
+    invoicing_detail_tax_id            as tax_id,
+    fd.store_address_id,
+    CAST(iii.base_amount / 100.00 AS DECIMAL(15, 2)) AS base_amount,
+    CAST(iii.tax_amount / 100.00 AS DECIMAL(15, 2)) AS tax_amount,
+    bb.processing_date,
+    bb.billing_cycle_start,
+    bb.billing_cycle_end,
+    emission_time
+from delta.fintech_financial_platform_odp.bls_bills bb
+     join delta.fintech_financial_platform_odp.bls_actors ba on bb.actor_id = ba.id
+     join delta.fintech_financial_platform_odp.inv_invoices ii on ii.bill_id = bb.id
+     join delta.fintech_financial_platform_odp.inv_invoice_items iii on ii.id = iii.invoice_id
+     join sensitive_delta.sensitive_fintech__financial_actors__odp.store_address_financial_details fd
+       on fd.store_address_id = ii.recipient_external_actor_id
+where fd.invoicing_detail_country_code = 'ES'
+ and ii.type = 'AGGREGATED'
+ and ba.partner_family = 'STANDARD'
+ and bb.status not in ('VOID','PROCESSING')
+ and ba.country_code = ('ES')
+and fd.invoicing_detail_tax_id in ('B46339453')
+-- and bb.billing_cycle_start = DATE '2024-02-16'
+-- and bb.billing_cycle_end = DATE '2024-02-29'
+and ba.external_id in (36)
+and bb.processing_date BETWEEN TIMESTAMP '2024-10-16 23:59:59 UTC' AND TIMESTAMP '2025-01-23 23:59:59 UTC';
+
