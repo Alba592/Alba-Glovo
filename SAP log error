@@ -1,0 +1,1 @@
+select * from "delta"."fintech_financial_platform_odp"."sap_master_data_published_with_error_flag" where flag_error = true;
