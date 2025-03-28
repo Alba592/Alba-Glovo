@@ -1,0 +1,18 @@
+SELECT
+    sa.store_id,
+    sa.store_address_id,
+    sa.store_address_tax_id,
+    sa.store_address_company_name,
+    sa.store_address_details,
+    store_address_is_enabled
+
+
+FROM "delta"."partner_stores_odp"."store_addresses_v2"  sa
+LEFT JOIN "sensitive_delta"."fintech_payouts_odp"."partner_bank_accounts" pba ON sa.store_address_id = pba.store_address_id
+LEFT JOIN "delta"."partner_stores_odp"."stores_v2" s2 ON sa.store_id = s2.store_id
+LEFT JOIN "delta"."central_geography_odp"."cities_v2" c ON s2.city_code = c.city_code
+WHERE sa.p_end_date IS NULL
+AND s2.p_end_date IS NULL
+AND sa.store_address_id IN (604331)
+AND c.country_code = 'ES'
+;
