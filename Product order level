@@ -1,0 +1,43 @@
+SELECT 
+       fom.order_country_code,
+       fom.order_id,
+       fom.order_code,
+       fom.store_address_id,       
+       fom.order_activated_local_at,
+       fom.order_dispatched_local_at,
+       fom.order_accepted_by_partner_local_at,
+       fom.order_activated_local_at,
+       fom.order_final_status,
+       fom.partner_cancellation_strategy,
+       CASE
+            WHEN (fom.partner_cancellation_strategy = 'PAY_PRODUCTS' AND fom.order_final_status = 'CanceledStatus') 
+                OR (fom.order_parent_relationship_type IN ('REORDER_COMPENSATION', 'REMAKE') AND fom.order_final_status = 'DeliveredStatus') 
+                    THEN
+                        CASE WHEN fom.order_country_code = 'TN' 
+                            THEN FORMAT('%.3f', COALESCE(fom.order_estimated_purchase_local_currency, 0))
+                            ELSE FORMAT('%.2f', COALESCE(fom.order_estimated_purchase_local_currency, 0))
+                        END
+            ELSE
+                CASE WHEN fom.order_country_code = 'TN' 
+                    THEN FORMAT('%.3f', COALESCE(fom.order_total_purchase_local_currency, 0))
+                    ELSE FORMAT('%.2f', COALESCE(fom.order_total_purchase_local_currency, 0))
+                END                     
+            END AS supply_delayed
+FROM delta.finance_financial_metrics_odp.financial_order_metrics fom
+WHERE
+    fom.order_country_code = 'ES'
+    AND fom.p_creation_date >= TIMESTAMP '2025-02-16' - interval '30' day
+    AND fom.p_creation_date <= TIMESTAMP '2025-02-28' + interval '1' day
+    AND fom.order_dispatched_local_at >= TIMESTAMP '2025-02-16 00:00:00 UTC' 
+    AND fom.order_dispatched_local_at <= TIMESTAMP '2025-02-28 23:59:59 UTC' 
+    AND fom.order_is_partner_order
+    AND fom.partner_cancellation_strategy <> ('PAY_NOTHING')
+    AND fom.order_final_status IN ('DeliveredStatus', 'CanceledStatus')
+    /* Add this filter if you want to see the result just for one/several orders */
+  --   AND fom.order_id in ()
+    /* Add this filter if you want to see the result just for one or several store_address_id */
+  AND fom.store_address_id IN (808982,808977,808983,809119,808928)
+ 
+
+
+;
