@@ -1,0 +1,32 @@
+-- SF Query to bill SAID
+SELECT
+    action,
+    am_email,
+    'PARTNER' as actor_type,
+    store_address_id as actor_external_id,
+    CASE 
+        WHEN LOWER(product_name) LIKE '%bubble%' THEN 'MKT_BUBBLE'
+        WHEN LOWER(product_name) LIKE '%delivery%' THEN 'MKT_DFP'
+        WHEN LOWER(product_name) LIKE '%grow%' THEN 'MKT_GMO'
+        WHEN LOWER(product_name) LIKE '%other%' THEN 'MKT_OTHER'
+        WHEN LOWER(product_name) LIKE '%crm%' THEN 'MKT_CRM'
+    ELSE product_name
+    END AS type,
+    NULL as description,
+    currency_code as currency,
+    SUM(amount_local_currency) as amount_excl_vat,
+    'YES' as tax_amount,
+    'PROMOTION' as source_type,
+    sale_order_item_id as source_id
+FROM "delta"."partner__ads_revenue__odp"."partner_ads_sale_order_items"
+where 1=1
+AND origin = 'salesforce'
+AND action = 'Invoice'
+AND opportunity_status = 'Closed Won'
+AND country_code = 'ES'
+AND expected_invoice_date >= DATE('2024-12-01')
+AND expected_invoice_date<=  DATE('2024-12-15')
+AND bill_to = 'Store Address ID'
+GROUP BY 1,2,3,4,5,6,7,9,10,11
+ORDER BY 4
+;
