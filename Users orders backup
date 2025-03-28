@@ -1,0 +1,76 @@
+SELECT
+order_id, 
+order_code,
+store_address_id,
+courier_id,
+customer_id,
+order_country_code,
+order_city_code,
+order_final_status,
+customer_cancellation_strategy,
+order_is_prime,
+payment_1_payment_status,
+order_is_partner_order,
+partner_is_mcdonalds,
+order_is_mfc,
+order_is_marketplace,
+order_vertical,
+order_subvertical2,
+order_handling_strategy,
+payment_1_payment_method,
+order_tax_rate_adj,
+order_activated_local_at,
+order_transacted_value_local_currency,
+order_total_purchase_eur,
+order_discount_on_products_local_currency,
+order_initial_base_delivery_fee_local_currency,
+order_discount_on_delivery_eur,
+tip_amount_local_currency,
+total_delivery_fee_local_currency,
+cpo_local_currency,
+order_delivered_weather_surcharge_local_currency,
+order_cancelled_weather_surcharge_local_currency,
+order_min_basket_surcharge_local_currency,
+order_service_fee_local_currency,
+product_total_revenue_eur,
+order_courier_total_compensation_local_currency
+
+FROM
+ delta.finance_financial_metrics_odp.financial_order_metrics fom
+WHERE
+-- customer_id in (119269136)
+ -- order_id IN (561476575)
+ order_code IN ('BML7A7GN')
+ -- and p_creation_date BETWEEN date '2023-01-01' AND date  '2023-12-31'
+ -- AND payment_1_payment_status = 'DELAYED'
+ -- AND order_subvertical <> 'On-Demand'
+-- AND order_subvertical <> 'Glovo Business'
+ AND order_parent_relationship_type IS NULL
+-- tax_id = 'B67285551'
+-- AND p_creation_date >= date '2023-01-01'
+
+select 
+order_vertical,
+order_subvertical,
+order_country_code
+FROM
+ delta.finance_financial_metrics_odp.financial_order_metrics fom
+where order_country_code = 'GE, KG, UG'
+ limit 2;
+
+SELECT
+order_code,
+cpo_local_currency
+FROM
+ delta.finance_financial_metrics_odp.financial_order_metrics fom
+WHERE
+-- customer_id in (119269136)
+ -- order_id IN (561476575)
+ order_code IN ('B1DMPNA5','BLDDADPG','BQ1XQZEM','BSNMRJLW','BSB9SBPJ','BC8HEWZV','BN9BVHCG','B1NLE1LP','BLABM11K','BXCEPK5M','BW5GPDY5','B1TUWL4U','BRQAMHBF','BGH8X11G','B5DCL8XX','BVMYMHWJ','BCB5L8C9','BGDX4JMN','BVNTMWLC','BZDGUNQL','BY154K2R','BK9TLBCZ','BVEM1FHT','BNLHYWCQ','BHDVDB3F','BML7A7GN')
+ -- and p_creation_date BETWEEN date '2023-01-01' AND date  '2023-12-31'
+ -- AND payment_1_payment_status = 'DELAYED'
+ -- AND order_subvertical <> 'On-Demand'
+-- AND order_subvertical <> 'Glovo Business'
+ AND order_parent_relationship_type IS NULL
+-- tax_id = 'B67285551'
+-- AND p_creation_date >= date '2023-01-01'
