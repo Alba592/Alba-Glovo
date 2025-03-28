@@ -1,0 +1,40 @@
+SELECT
+    bbi.bill_id,
+    bbi.source_id AS order_id,
+    o.order_code,
+    ba.external_id AS consolidated_partner_id,
+    ba.partner_family AS partner_family,
+    ba.type AS BA_TYPE,
+    o.store_address_id,
+    ba.city_code,
+    ba.country_code,
+    o.order_activated_at,
+    SUM(IF(bbi.type = 'ORDER', bbi.amount, 0)) / 100.0 AS Products,
+    SUM(IF(bbi.type = 'PROMOTION', bbi.amount, 0)) / 100.0 AS Promotion,
+    CAST(SUM(CASE WHEN bbi.type = 'DELIVERY_FEE' THEN bbi.amount ELSE 0 END) / 100.0 AS DECIMAL(15, 2)) AS DF,
+    ABS(SUM(IF(bbi.type = 'COST_PER_ORDER_ASSUMED', bbi.amount, 0)) / 100.0) AS CPO,
+    ABS(SUM(IF(bbi.type = 'EFFECTIVE_COMMISSION', bbi.amount, 0)) / 100.0) AS Effective_commission,
+    ABS(SUM(IF(bbi.type = 'GLOVO_BALANCE_DISCOUNT', bbi.amount, 0)) / 100.0) AS Glovo_balance_discount,
+    SUM(IF(bbi.type = 'PROMOTION_ON_DELIVERY', bbi.amount, 0)) / 100.0 AS Promotion_on_delivery,
+    SUM(IF(bbi.type = 'REFUND', bbi.amount, 0)) / 100.0 AS Refund,
+    SUM(IF(bbi.type = 'SURCHARGE', bbi.amount, 0)) / 100.0 AS Surcharge,
+    SUM(IF(bbi.type = 'PRODUCTS_PAID_IN_CASH', bbi.amount, 0)) / 100.0 AS Products_paid_in_cash,
+    SUM(IF(bbi.type = 'ADJUSTMENT', bbi.amount, 0)) / 100.0 AS adjustment
+FROM delta.fintech_financial_platform_odp.bls_bill_items bbi
+JOIN delta.fintech_financial_platform_odp.bls_bills bb ON bbi.bill_id = bb.id
+JOIN delta.fintech_financial_platform_odp.bls_actors ba ON bb.actor_id = ba.id
+JOIN delta.central_order_descriptors_odp.order_descriptors_v2 o ON o.order_id = bbi.source_id
+WHERE
+    ba.country_code = 'MA'
+    AND ba.type = 'CONSOLIDATED_PARTNER'
+    AND bb.processing_date >= DATE '2024-09-01'
+    AND bb.processing_date < DATE '2024-09-02'
+GROUP BY 1,2,3,4,5,6,7,8,9,10
+
+
+select 
+id,
+billing_cycle
+from delta.fintech_financial_platform_odp.bls_actors ba
+where id = 36
+limit 1;
