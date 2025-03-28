@@ -1,0 +1,64 @@
+/*  This query retrieves refunds charged to partner, per order_id. In case the order had more than 1 refund, the amounts are summed per concept.  */
+-- The order_level CTE must be the same in cost_of_incidents_refund_level and cost_of_incidents_partner_level
+
+WITH
+
+    /*
+    EDIT FILTER VALUES BEFORE EXECUTING
+    DATES: dates are inclusive, meaning the query will retrieve all information from start_date until end of end_date.
+    COUNTRIES: inform the country you want to query
+    */
+
+    date_filters AS (
+        SELECT 'start_date' AS label, TIMESTAMP '2024-12-16 00:00:00 UTC' AS val
+        UNION ALL
+        SELECT 'end_date'   AS label, TIMESTAMP '2024-12-22 23:59:59 UTC' AS val
+    ),
+    country_filters AS (
+        SELECT 'country' AS label, 'ES' AS val
+    ),
+    order_level AS (SELECT DISTINCT  fom.order_country_code                             AS country_code,
+                                     fom.order_id,
+                                     fom.order_code,
+                                     fom.order_activated_local_at,
+                                     CONCAT('P', CAST(fom.store_address_id as varchar)) AS store_address_id,
+                                     fom.store_id,
+                                     fom.partner_commission_pct                         AS partner_commission_percentage,
+                                     COALESCE(ori.charged_to_partner_eur, 0)            AS amount_eur,
+                                     COALESCE(ori.charged_to_partner, 0)                AS amount_local_curr,
+                                    (ori.reason)                                        AS refund_reason,
+                                    CASE WHEN fom.order_vertical <> 'Food'
+                                          THEN 'COSTE_INCIDENCIAS'
+                                        ELSE 'COSTE_INC_MANUAL' END                     AS concept
+
+                    FROM delta.contact_order_refund_incidents_odp.order_refund_incidents ori
+                    LEFT JOIN delta.finance_financial_metrics_odp.financial_order_metrics fom ON ori.order_id = fom.order_id
+                    WHERE ori.p_creation_date BETWEEN (SELECT date(VAL) FROM date_filters WHERE label = 'start_date') - INTERVAL '1' DAY AND (SELECT date(VAL) FROM date_filters WHERE label = 'end_date')  + INTERVAL '1' DAY
+                      AND ori.update_time_local BETWEEN (SELECT VAL FROM date_filters WHERE label = 'start_date') AND  (SELECT VAL FROM date_filters WHERE label = 'end_date')
+                      AND fom.p_creation_date BETWEEN  (SELECT date(VAL) FROM date_filters WHERE label = 'start_date') - INTERVAL '45' DAY AND  (SELECT VAL FROM date_filters WHERE label = 'end_date') + INTERVAL '1' DAY
+                      AND fom.order_started_local_at BETWEEN  (SELECT VAL FROM date_filters WHERE label = 'start_date') - INTERVAL '45' DAY AND  (SELECT VAL FROM date_filters WHERE label = 'end_date')
+                      AND fom.order_country_code = (SELECT VAL FROM country_filters WHERE label = 'country')
+                      AND ori.deactivation_time IS NULL
+                      AND ori.partner_resolution NOT IN ('CHARGE_NOTHING')
+                      AND fom.store_address_id IS NOT NULL
+                      -- If you want only a specific partner, add the store_name or store_id below:
+                      -- AND fom.store_name IN ('KFC')
+                       AND fom.store_address_id IN ()
+
+
+
+)
+SELECT o.country_code                  AS country_code,
+       o.order_id,
+       o.order_code,
+       o.store_address_id              AS store_address_id,
+       o.store_id                      AS store_id,
+       o.partner_commission_percentage AS partner_commission_percentage,
+       SUM(amount_eur)                 AS amount_eur,
+       SUM(amount_local_curr)          AS amount_local_curr,
+       o.concept                       AS concept
+
+FROM order_level o
+WHERE o.store_address_id IS NOT NULL
+  AND NOT o.store_address_id = 'P'
+GROUP BY 1, 2, 3, 4, 5, 6, 9;
