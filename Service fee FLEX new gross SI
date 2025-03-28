@@ -1,0 +1,22 @@
+SELECT
+      ba.city_code,
+      ba.external_id AS customer_id,
+      fi.order_code,
+      ABS(SUM(bi.amount) / 100.00) + ABS(SUM(bi.tax) / 100.00) AS service_fee_amount
+    FROM
+      "delta"."fintech_financial_platform_odp"."bls_bill_items" bi
+      JOIN "delta"."fintech_financial_platform_odp"."bls_bills" bb ON bi.bill_id = bb.id
+      JOIN "delta"."fintech_financial_platform_odp"."bls_actors" ba ON bb.actor_id = ba.id
+      JOIN "delta"."finance_financial_metrics_odp"."financial_order_metrics" fi ON fi.order_id = bi.source_id
+    WHERE
+      bi.type = 'SERVICE_FEE'
+      AND ba.country_code = 'ES'
+      AND order_parent_relationship_type IS NULL
+      AND fi.order_subvertical <> 'MFC'
+      AND fi.order_subvertical <> 'On-Demand'
+      AND fi.order_code in ('MNAYVLH9') 
+     -- AND bi.creation_time BETWEEN TIMESTAMP '{start_date} 00:00:00.000 UTC' AND TIMESTAMP  '{end_date} 00:00:00.000 UTC'
+    GROUP BY
+      1,2,3
+
+      
