@@ -1,0 +1,16 @@
+SELECT
+'PARTNER' AS actor_type,
+o.store_address_id AS actor_external_id,
+'CANCELLATION COST' AS description,
+ROUND(SUM(o.order_courier_total_compensation_local_currency),2) AS amount
+FROM delta.finance_financial_metrics_odp.financial_order_metrics o
+JOIN delta.central_order_descriptors_odp.order_descriptors_v2 od on (o.order_id = od.order_id)
+WHERE
+o.order_country_code='ES'
+AND o.order_activated_local_at BETWEEN timestamp '2025-01-16 UTC' AND timestamp '2025-01-31 UTC'
+AND o.order_final_status='CanceledStatus'
+AND o.store_address_id IS NOT NULL
+AND o.order_is_partner_order
+AND od.order_cancel_reason IN ('PARTNER_PRINTER_ISSUE','PRODUCTS_NOT_AVAILABLE','STORE_CAN_NOT_DELIVER','STORE_CLOSED')
+and o.store_address_id in (731670)
+GROUP BY 1,2,3;
