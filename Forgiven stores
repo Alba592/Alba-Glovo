@@ -1,0 +1,10 @@
+SELECT
+    external_id,
+    partner_family,
+    invoicing_model,
+    invoicing_scope,
+    billing_cycle
+FROM
+    "delta"."fintech_financial_platform_odp"."bls_actors"
+WHERE
+    country_code = 'PT';
