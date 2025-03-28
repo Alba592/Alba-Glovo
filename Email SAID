@@ -4,3 +4,5 @@ invoicing_detail_primary_email
 FROM "sensitive_delta"."sensitive_fintech__financial_actors__odp"."store_address_financial_details"
 where store_address_id IN (697547)
 limit 1;
+
+-- this is for checking the email address for SAID
